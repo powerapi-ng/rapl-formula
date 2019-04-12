@@ -67,7 +67,6 @@ from powerapi.puller import PullerActor
 from powerapi.report import HWPCReport, PowerReport
 from powerapi.report_model import HWPCModel
 from powerapi.dispatcher import DispatcherActor, RouteTable
-from powerapi.report import create_report_root
 
 from rapl_formula import RAPLFormulaActor
 
