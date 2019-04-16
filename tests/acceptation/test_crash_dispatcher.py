@@ -125,7 +125,7 @@ class MainProcess(Process):
 
         # Formula
         formula_factory = (lambda name, verbose:
-                           RAPLFormulaActor(name, pusher, level_logger=verbose))
+                           RAPLFormulaActor(name, {'my_pusher': pusher}, level_logger=verbose))
 
         # Dispatcher
         route_table = RouteTable()
