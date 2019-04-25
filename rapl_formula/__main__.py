@@ -64,12 +64,6 @@ def arg_parser_init():
     parser.add_argument("output_db", help="MongoDB output database")
     parser.add_argument("output_collection", help="MongoDB output collection")
 
-    # DispatchRule
-    parser.add_argument("hwpc_dispatch_rule", help=
-                        "Define the dispatch_rule rule, "
-                        "Can be CORE, SOCKET or ROOT",
-                        choices=['CORE', 'SOCKET', 'ROOT'])
-
     # Verbosity
     parser.add_argument("-v", "--verbose", help="Enable verbosity",
                         action="store_true", default=False)
@@ -99,7 +93,7 @@ def launch_powerapi(args, logger):
     # Dispatcher
     route_table = RouteTable()
     route_table.dispatch_rule(HWPCReport, HWPCDispatchRule(
-        getattr(HWPCDepthLevel, args.hwpc_dispatch_rule), primary=True))
+        getattr(HWPCDepthLevel, 'ROOT'), primary=True))
 
     dispatcher = DispatcherActor('dispatcher', formula_factory, route_table,
                                  level_logger=args.verbose)
