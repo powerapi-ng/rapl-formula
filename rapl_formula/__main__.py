@@ -88,7 +88,7 @@ def launch_powerapi(args, logger):
 
     # Formula
     formula_factory = (lambda name, verbose:
-                       RAPLFormulaActor(name, pusher, level_logger=verbose))
+                       RAPLFormulaActor(name, {'power': pusher}, level_logger=verbose))
 
     # Dispatcher
     route_table = RouteTable()
