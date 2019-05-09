@@ -38,8 +38,7 @@ from powerapi.report import create_core_report, create_socket_report
 from powerapi.report import create_group_report, create_report_root
 from powerapi.report import PowerReport
 from powerapi.formula import FormulaState
-from powerapi.handler import FormulaHandler
-from rapl_formula import RAPLFormulaActor, RAPLModel
+from rapl_formula.rapl_handlers import RAPLHandler
 
 #####################################
 def get_fake_pusher():
@@ -53,22 +52,12 @@ def get_fake_pusher():
 
 @pytest.fixture
 def state():
-    return FormulaState(None, mock.Mock(), mock.Mock(), ('toto', 'toto', '1'), [], mock.Mock())
+    return FormulaState(None, mock.Mock(), mock.Mock(), ('toto', 'toto', '1'), [])
 
 
 #####################################
 # Test RAPLFormulaHWPCReportHandler #
 #####################################
-
-
-def test_handle_no_hwpc_report(state):
-    """
-    handle a message that is not a HWPCReport, this must raise an
-    UnknowMessageTypeException
-    """
-    with pytest.raises(UnknowMessageTypeException):
-        FormulaHandler().handle("toto",
-                                state)
 
 
 def test_handle_hwpc_report_with_one_rapl_event(state):
@@ -96,7 +85,7 @@ def test_handle_hwpc_report_with_one_rapl_event(state):
                                     {'socket': socket_id,
                                      'event': rapl_event_id})
 
-    result = RAPLModel(state.formula_id).estimate(hwpc_report)
+    result = RAPLHandler(state.formula_id)._estimate(hwpc_report)
     assert [validation_report] == result
 
 
@@ -131,7 +120,7 @@ def test_handle_hwpc_report_with_one_rapl_event_and_other_groups(state):
                                     {'socket': socket_id,
                                      'event': rapl_event_id})
 
-    result = RAPLModel(state.formula_id).estimate(hwpc_report)
+    result = RAPLHandler(state.formula_id)._estimate(hwpc_report)
 
     assert [validation_report] == result
 
@@ -174,7 +163,7 @@ def test_handle_hwpc_report_with_two_rapl_event(state):
                                       {'socket': socket_id,
                                        'event': rapl_event_id_2})
 
-    result = RAPLModel(state.formula_id).estimate(hwpc_report)
+    result = RAPLHandler(state.formula_id)._estimate(hwpc_report)
 
     assert len(result) == 2
     assert validation_report_1 in result
@@ -227,7 +216,7 @@ def test_handle_hwpc_report_with_two_rapl_event_and_other_groups(state):
                                       {'socket': socket_id,
                                        'event': rapl_event_id_2})
 
-    result = RAPLModel(state.formula_id).estimate(hwpc_report)
+    result = RAPLHandler(state.formula_id)._estimate(hwpc_report)
 
     assert len(result) == 2
     assert validation_report_1 in result

@@ -35,13 +35,13 @@ from powerapi.handler import Handler
 from powerapi.report import PowerReport
 
 
-class RAPLHWPCHandler(Handler):
+class RAPLHandler(Handler):
     """
-    RAPLHWPCHandler class
+    RAPLHandler class
     """
     def __init__(self, formula_id):
         """
-        RAPLHWPCHandler initialization
+        RAPLHandler initialization
         """
         self.formula_id = formula_id
 
