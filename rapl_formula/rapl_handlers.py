@@ -31,21 +31,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import math
 
-from powerapi.model import Model
+from powerapi.handler import Handler
 from powerapi.report import PowerReport
 
 
-class RAPLModel(Model):
+class RAPLHWPCHandler(Handler):
     """
-    RAPLModel class
+    RAPLHWPCHandler class
     """
     def __init__(self, formula_id):
         """
-        RAPLModel initialization
+        RAPLHWPCHandler initialization
         """
         self.formula_id = formula_id
 
-    def estimate(self, report):
+    def _estimate(self, report):
         """
         Method that estimate the power consumption from an input report
         :param report: Input Report
@@ -77,4 +77,19 @@ class RAPLModel(Model):
                             reports.append(gen_power_report(report, socket,
                                                             event, counter))
         return reports
+
+    def handle(self, msg, state):
+        """
+        Process a report and send the result to the pusher actor
+        :param powerapi.Report msg:  Received message
+        :param powerapi.State state: Actor state
+        :return: New Actor state
+        :rtype:  powerapi.State
+        :raises UnknowMessageTypeException: If the msg is not a Report
+        """
+        results = self._estimate(msg)
+        for _, actor_pusher in state.pusher_actors.items():
+            for result in results:
+                actor_pusher.send_data(result)
+        return state
 

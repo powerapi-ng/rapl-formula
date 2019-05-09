@@ -36,10 +36,9 @@ from functools import reduce
 from powerapi.actor import Actor, SocketInterface
 from powerapi.formula import FormulaActor, FormulaState
 from powerapi.handler import PoisonPillMessageHandler
-from powerapi.handler import FormulaHandler
 from powerapi.message import PoisonPillMessage
 from powerapi.report import HWPCReport
-from rapl_formula.rapl_model import RAPLModel
+from rapl_formula.rapl_handlers import RAPLHWPCHandler
 
 
 class RAPLFormulaActor(FormulaActor):
@@ -62,8 +61,7 @@ class RAPLFormulaActor(FormulaActor):
         #: (powerapi.State): Basic state of the Formula.
         self.state = FormulaState(Actor._initial_behaviour,
                                   SocketInterface(name, timeout),
-                                  self.logger, formula_id, pusher_actors,
-                                  RAPLModel(formula_id))
+                                  self.logger, formula_id, pusher_actors)
 
     def setup(self):
         """
@@ -71,4 +69,4 @@ class RAPLFormulaActor(FormulaActor):
         """
         FormulaActor.setup(self)
         self.add_handler(PoisonPillMessage, PoisonPillMessageHandler())
-        self.add_handler(HWPCReport, FormulaHandler())
+        self.add_handler(HWPCReport, RAPLHWPCHandler())
