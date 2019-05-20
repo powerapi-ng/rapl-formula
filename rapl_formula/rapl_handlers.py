@@ -39,11 +39,11 @@ class RAPLHandler(Handler):
     """
     RAPLHandler class
     """
-    def __init__(self, formula_id):
+    def __init__(self, state):
         """
         RAPLHandler initialization
         """
-        self.formula_id = formula_id
+        super().__init__(state)
 
     def _estimate(self, report):
         """
@@ -70,7 +70,7 @@ class RAPLHandler(Handler):
 
         reports = []
         for socket, socket_report in report.groups['rapl'].items():
-            if len(self.formula_id) < 3 or int(self.formula_id[2]) == int(socket):
+            if len(self.state.formula_id) < 3 or int(self.state.formula_id[2]) == int(socket):
                 for events_counter in socket_report.values():
                     for event, counter in events_counter.items():
                         if event.startswith('RAPL_'):
@@ -78,18 +78,15 @@ class RAPLHandler(Handler):
                                                             event, counter))
         return reports
 
-    def handle(self, msg, state):
+    def handle(self, msg):
         """
         Process a report and send the result to the pusher actor
         :param powerapi.Report msg:  Received message
-        :param powerapi.State state: Actor state
         :return: New Actor state
         :rtype:  powerapi.State
         :raises UnknowMessageTypeException: If the msg is not a Report
         """
         results = self._estimate(msg)
-        for _, actor_pusher in state.pusher_actors.items():
+        for _, actor_pusher in self.state.pushers.items():
             for result in results:
                 actor_pusher.send_data(result)
-        return state
-

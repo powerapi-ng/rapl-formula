@@ -41,6 +41,21 @@ from powerapi.report import HWPCReport
 from rapl_formula.rapl_handlers import RAPLHandler
 
 
+class RAPLFormulaState(FormulaState):
+    """
+    RAPLFormulaState
+    """
+    def __init__(self, actor, pushers, formula_id):
+        """
+        Initialize a new RAPLFormula actor state.
+        :param actor: Actor linked to the state
+        :param pushers: Pushers available for the actor
+        :param formula_id: Formula id
+        """
+        super().__init__(actor, pushers)
+        self.formula_id = formula_id
+
+
 class RAPLFormulaActor(FormulaActor):
     """
     A formula to handle RAPL events.
@@ -59,14 +74,12 @@ class RAPLFormulaActor(FormulaActor):
         formula_id = reduce(lambda acc, x: acc + (re.search(r'^\(? ?\'(.*)\'\)?', x).group(1),), name.split(','), ())
 
         #: (powerapi.State): Basic state of the Formula.
-        self.state = FormulaState(Actor._initial_behaviour,
-                                  SocketInterface(name, timeout),
-                                  self.logger, formula_id, pusher_actors)
+        self.state = RAPLFormulaState(self, pusher_actors, formula_id)
 
     def setup(self):
         """
         Setup the RAPL formula.
         """
         FormulaActor.setup(self)
-        self.add_handler(PoisonPillMessage, PoisonPillMessageHandler())
-        self.add_handler(HWPCReport, RAPLHandler(self.state.formula_id))
+        self.add_handler(PoisonPillMessage, PoisonPillMessageHandler(self.state))
+        self.add_handler(HWPCReport, RAPLHandler(self.state))

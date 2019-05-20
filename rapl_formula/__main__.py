@@ -45,6 +45,7 @@ from powerapi.report_model import HWPCModel
 from powerapi.dispatcher import DispatcherActor, RouteTable
 from rapl_formula.rapl_formula_actor import RAPLFormulaActor
 
+
 class BadActorInitializationError(Exception):
     """ Error if actor doesn't answer with "OKMessage" """
 
@@ -120,7 +121,7 @@ def launch_powerapi(args, logger):
     signal.signal(signal.SIGTERM, term_handler)
     signal.signal(signal.SIGINT, term_handler)
 
-    supervisor = BackendSupervisor(puller.state.stream_mode)
+    supervisor = BackendSupervisor(puller.state.database.stream_mode)
     try:
         supervisor.launch_actor(pusher)
         supervisor.launch_actor(dispatcher)

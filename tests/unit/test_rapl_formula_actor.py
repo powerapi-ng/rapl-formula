@@ -37,8 +37,8 @@ from powerapi.message import UnknowMessageTypeException
 from powerapi.report import create_core_report, create_socket_report
 from powerapi.report import create_group_report, create_report_root
 from powerapi.report import PowerReport
-from powerapi.formula import FormulaState
 from rapl_formula.rapl_handlers import RAPLHandler
+from rapl_formula.rapl_formula_actor import RAPLFormulaState
 
 #####################################
 def get_fake_pusher():
@@ -52,7 +52,7 @@ def get_fake_pusher():
 
 @pytest.fixture
 def state():
-    return FormulaState(None, mock.Mock(), mock.Mock(), ('toto', 'toto', '1'), [])
+    return RAPLFormulaState(None, [], ('toto', 'toto', '1'))
 
 
 #####################################
@@ -85,7 +85,7 @@ def test_handle_hwpc_report_with_one_rapl_event(state):
                                     {'socket': socket_id,
                                      'event': rapl_event_id})
 
-    result = RAPLHandler(state.formula_id)._estimate(hwpc_report)
+    result = RAPLHandler(state)._estimate(hwpc_report)
     assert [validation_report] == result
 
 
@@ -120,7 +120,7 @@ def test_handle_hwpc_report_with_one_rapl_event_and_other_groups(state):
                                     {'socket': socket_id,
                                      'event': rapl_event_id})
 
-    result = RAPLHandler(state.formula_id)._estimate(hwpc_report)
+    result = RAPLHandler(state)._estimate(hwpc_report)
 
     assert [validation_report] == result
 
@@ -163,7 +163,7 @@ def test_handle_hwpc_report_with_two_rapl_event(state):
                                       {'socket': socket_id,
                                        'event': rapl_event_id_2})
 
-    result = RAPLHandler(state.formula_id)._estimate(hwpc_report)
+    result = RAPLHandler(state)._estimate(hwpc_report)
 
     assert len(result) == 2
     assert validation_report_1 in result
@@ -216,7 +216,7 @@ def test_handle_hwpc_report_with_two_rapl_event_and_other_groups(state):
                                       {'socket': socket_id,
                                        'event': rapl_event_id_2})
 
-    result = RAPLHandler(state.formula_id)._estimate(hwpc_report)
+    result = RAPLHandler(state)._estimate(hwpc_report)
 
     assert len(result) == 2
     assert validation_report_1 in result
