@@ -40,8 +40,8 @@ from powerapi.pusher import PusherActor
 from powerapi.dispatch_rule import HWPCDispatchRule, HWPCDepthLevel
 from powerapi.filter import Filter
 from powerapi.puller import PullerActor
-from powerapi.report import HWPCReport, PowerReport
-from powerapi.report_model import HWPCModel
+from powerapi.report import HWPCReport
+from powerapi.report_model import HWPCModel, PowerModel
 from powerapi.dispatcher import DispatcherActor, RouteTable
 from rapl_formula.rapl_formula_actor import RAPLFormulaActor
 
@@ -82,9 +82,8 @@ def launch_powerapi(args, logger):
 
     # Pusher
     output_mongodb = MongoDB(args.output_uri,
-                             args.output_db, args.output_collection,
-                             HWPCModel())
-    pusher = PusherActor("pusher_mongodb", PowerReport, output_mongodb,
+                             args.output_db, args.output_collection)
+    pusher = PusherActor("pusher_mongodb", PowerModel(), output_mongodb,
                          level_logger=args.verbose)
 
     # Formula
@@ -100,13 +99,11 @@ def launch_powerapi(args, logger):
                                  level_logger=args.verbose)
 
     # Puller
-    input_mongodb = MongoDB(args.input_uri,
-                            args.input_db, args.input_collection,
-                            HWPCModel(), stream_mode=args.stream_mode)
+    input_mongodb = MongoDB(args.input_uri, args.input_db, args.input_collection)
     report_filter = Filter()
     report_filter.filter(lambda msg: True, dispatcher)
     puller = PullerActor("puller_mongodb", input_mongodb,
-                         report_filter, level_logger=args.verbose)
+                         report_filter, HWPCModel(), stream_mode=args.stream_mode, level_logger=args.verbose)
 
     ##########################################################################
     # Actor start step
@@ -121,7 +118,7 @@ def launch_powerapi(args, logger):
     signal.signal(signal.SIGTERM, term_handler)
     signal.signal(signal.SIGINT, term_handler)
 
-    supervisor = BackendSupervisor(puller.state.database.stream_mode)
+    supervisor = BackendSupervisor(puller.state.stream_mode)
     try:
         supervisor.launch_actor(pusher)
         supervisor.launch_actor(dispatcher)
