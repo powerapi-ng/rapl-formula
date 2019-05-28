@@ -33,16 +33,17 @@ import argparse
 import logging
 import signal
 import zmq
+
+from powerapi.cli.tools import CommonCLIParser
 from powerapi.actor import ActorInitError
 from powerapi.backendsupervisor import BackendSupervisor
-from powerapi.database import MongoDB
-from powerapi.pusher import PusherActor
+
 from powerapi.dispatch_rule import HWPCDispatchRule, HWPCDepthLevel
 from powerapi.filter import Filter
-from powerapi.puller import PullerActor
 from powerapi.report import HWPCReport
-from powerapi.report_model import HWPCModel, PowerModel
 from powerapi.dispatcher import DispatcherActor, RouteTable
+from powerapi.cli.tools import generate_pullers, generate_pushers
+
 from rapl_formula.rapl_formula_actor import RAPLFormulaActor
 
 
@@ -50,45 +51,16 @@ class BadActorInitializationError(Exception):
     """ Error if actor doesn't answer with "OKMessage" """
 
 
-def arg_parser_init():
-    """ initialize argument parser"""
-    parser = argparse.ArgumentParser(
-        description="Start PowerAPI with the specified configuration.")
-
-    # MongoDB input
-    parser.add_argument("input_uri", help="MongoDB input uri")
-    parser.add_argument("input_db", help="MongoDB input database")
-    parser.add_argument("input_collection", help="MongoDB input collection")
-
-    # MongoDB output
-    parser.add_argument("output_uri", help="MongoDB output uri")
-    parser.add_argument("output_db", help="MongoDB output database")
-    parser.add_argument("output_collection", help="MongoDB output collection")
-
-    # Verbosity
-    parser.add_argument("-v", "--verbose", help="Enable verbosity",
-                        action="store_true", default=False)
-
-    # Stream mode
-    parser.add_argument("-s", "--stream_mode", help="Enable stream mode",
-                        action="store_true", default=False)
-    return parser
-
-
-def launch_powerapi(args, logger):
-
+def launch_powerapi(config, logger):
     ##########################################################################
     # Actor Creation
 
     # Pusher
-    output_mongodb = MongoDB(args.output_uri,
-                             args.output_db, args.output_collection)
-    pusher = PusherActor("pusher_mongodb", PowerModel(), output_mongodb,
-                         level_logger=args.verbose)
+    pushers = generate_pushers(config)
 
     # Formula
     formula_factory = (lambda name, verbose:
-                       RAPLFormulaActor(name, {'power': pusher}, level_logger=verbose))
+                       RAPLFormulaActor(name, pushers, level_logger=verbose))
 
     # Dispatcher
     route_table = RouteTable()
@@ -96,33 +68,39 @@ def launch_powerapi(args, logger):
         getattr(HWPCDepthLevel, 'ROOT'), primary=True))
 
     dispatcher = DispatcherActor('dispatcher', formula_factory, route_table,
-                                 level_logger=args.verbose)
+                                 level_logger=config['verbose'])
 
     # Puller
-    input_mongodb = MongoDB(args.input_uri, args.input_db, args.input_collection)
     report_filter = Filter()
     report_filter.filter(lambda msg: True, dispatcher)
-    puller = PullerActor("puller_mongodb", input_mongodb,
-                         report_filter, HWPCModel(), stream_mode=args.stream_mode, level_logger=args.verbose)
+    pullers = generate_pullers(config, report_filter)
 
     ##########################################################################
     # Actor start step
 
     # Setup signal handler
     def term_handler(_, __):
-        puller.send_kill()
+        for _, puller in pullers.items():
+            puller.send_kill()
+
         dispatcher.send_kill()
-        pusher.send_kill()
+
+        for _, pusher in pushers.items():
+            pusher.send_kill()
         exit(0)
 
     signal.signal(signal.SIGTERM, term_handler)
     signal.signal(signal.SIGINT, term_handler)
 
-    supervisor = BackendSupervisor(puller.state.stream_mode)
+    supervisor = BackendSupervisor(config['stream'])
     try:
-        supervisor.launch_actor(pusher)
+        for _, pusher in pushers.items():
+            supervisor.launch_actor(pusher)
+
         supervisor.launch_actor(dispatcher)
-        supervisor.launch_actor(puller)
+
+        for _, puller in pullers.items():
+            supervisor.launch_actor(puller)
 
     except zmq.error.ZMQError as exn:
         logger.error('Communication error, ZMQError code : ' + str(exn.errno) +
@@ -145,14 +123,13 @@ def main(args=None):
     """
     Main function of the PowerAPI CLI
     """
-    args = arg_parser_init().parse_args()
-    if args.verbose:
-        args.verbose = logging.DEBUG
+    parser = CommonCLIParser()
+    config = parser.parse_argv()
 
     logger = logging.getLogger('main_logger')
-    logger.setLevel(args.verbose)
+    logger.setLevel(config['verbose'])
     logger.addHandler(logging.StreamHandler())
-    launch_powerapi(args, logger)
+    launch_powerapi(config, logger)
 
 
 if __name__ == "__main__":
