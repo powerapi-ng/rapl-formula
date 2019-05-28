@@ -22,15 +22,17 @@ database must be accessible by the rapl_formula.
 with python(>=3.7):
 
 ```bash
-python3 -m rapl_formula input_mongo_uri input_db input_collection
-                        output_mongo_uri output_db output_collection
+python3 -m rapl_formula --output mongodb --uri input_mongo_uri --db input_db
+	--collection input_collection --input mongodb --uri output_mongo_uri --db output_db
+	--collection output_collection
 ```
 
 with docker:
 
 ```bash
-docker run powerapi/rapl-formula input_mongo_uri input_db input_collection
-                                 output_mongo_uri output_db output_collection
+docker run powerapi/rapl-formula --output mongodb --uri input_mongo_uri --db input_db
+	--collection input_collection --input mongodb --uri output_mongo_uri --db output_db
+	--collection output_collection
 ```
 
 with the following configuration: 

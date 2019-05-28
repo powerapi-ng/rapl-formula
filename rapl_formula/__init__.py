@@ -31,4 +31,4 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from rapl_formula.rapl_formula_actor import RAPLFormulaActor
 from rapl_formula.rapl_handlers import RAPLHandler
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
