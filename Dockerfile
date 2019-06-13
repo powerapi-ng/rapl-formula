@@ -1,4 +1,4 @@
-FROM powerapi/powerapi
+FROM powerapi/powerapi:0.4.0
 
 WORKDIR /opt/rapl_formula
 USER powerapi
