@@ -9,17 +9,16 @@ jobs:
       - checkout
 
       - run:
+          name: check git tag with package version
+          command: |
+            test $(grep version rapl_formula/__init__.py | sed 's/\__version__ = "\(.*\)\"/\1/') == $CIRCLE_TAG
+
+      - run:
           name: prepare environment
           command: |
             python3 -m venv venv
             . venv/bin/activate
             pip3 install -U pip twine
-            pip3 install .
-
-      - run:
-          name: check git tag with package version
-          command: |
-            python3 -c "import os, rapl_formula; exit(os.environ.get('CIRCLE_TAG', '?')[1:] != rapl_formula.__version__)"
 
       - run:
           name: init .pypirc
