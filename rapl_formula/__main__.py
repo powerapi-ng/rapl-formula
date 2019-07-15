@@ -52,8 +52,6 @@ class BadActorInitializationError(Exception):
 
 
 def launch_powerapi(config, logger):
-    ##########################################################################
-    # Actor Creation
 
     # Pusher
     pushers = generate_pushers(config)
@@ -74,9 +72,6 @@ def launch_powerapi(config, logger):
     report_filter = Filter()
     report_filter.filter(lambda msg: True, dispatcher)
     pullers = generate_pullers(config, report_filter)
-
-    ##########################################################################
-    # Actor start step
 
     # Setup signal handler
     def term_handler(_, __):
@@ -110,13 +105,8 @@ def launch_powerapi(config, logger):
         logger.error('Actor initialisation error, reason : ' + exn.message)
         supervisor.kill_actors()
 
-    ##########################################################################
-    # Actor run step
-
     # wait
     supervisor.join()
-
-    ##########################################################################
 
 
 def main(args=None):
