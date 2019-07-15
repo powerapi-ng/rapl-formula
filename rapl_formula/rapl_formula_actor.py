@@ -34,7 +34,7 @@ import re
 from functools import reduce
 
 from powerapi.actor import Actor, SocketInterface
-from powerapi.formula import FormulaActor, FormulaState
+from powerapi.formula import FormulaActor, FormulaState, FormulaPoisonPillMessageHandler
 from powerapi.handler import PoisonPillMessageHandler
 from powerapi.message import PoisonPillMessage
 from powerapi.report import HWPCReport
@@ -81,5 +81,5 @@ class RAPLFormulaActor(FormulaActor):
         Setup the RAPL formula.
         """
         FormulaActor.setup(self)
-        self.add_handler(PoisonPillMessage, PoisonPillMessageHandler(self.state))
+        self.add_handler(PoisonPillMessage, FormulaPoisonPillMessageHandler(self.state))
         self.add_handler(HWPCReport, RAPLHandler(self.state))
