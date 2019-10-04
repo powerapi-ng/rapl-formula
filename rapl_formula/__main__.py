@@ -42,7 +42,7 @@ from powerapi.dispatch_rule import HWPCDispatchRule, HWPCDepthLevel
 from powerapi.filter import Filter
 from powerapi.report import HWPCReport
 from powerapi.dispatcher import DispatcherActor, RouteTable
-from powerapi.cli.tools import generate_pullers, generate_pushers
+from powerapi.cli.tools import PullerGenerator, PusherGenerator
 
 from rapl_formula.rapl_formula_actor import RAPLFormulaActor
 
@@ -54,7 +54,8 @@ class BadActorInitializationError(Exception):
 def launch_powerapi(config, logger):
 
     # Pusher
-    pushers = generate_pushers(config)
+    pusher_generator = PusherGenerator()
+    pushers = pusher_generator.generate(config)
 
     # Formula
     formula_factory = (lambda name, verbose:
@@ -71,7 +72,8 @@ def launch_powerapi(config, logger):
     # Puller
     report_filter = Filter()
     report_filter.filter(lambda msg: True, dispatcher)
-    pullers = generate_pullers(config, report_filter)
+    puller_generator = PullerGenerator(report_filter)
+    pullers = puller_generator.generate(config)
 
     # Setup signal handler
     def term_handler(_, __):

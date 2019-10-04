@@ -9,7 +9,12 @@ Use RAPL data collected with the
 power consumption measures (in Watt). The power consumption measures are store
 in a MongoDB database.
 
-# Usage
+# Quick start
+
+We detail here how to quickly start rapl-formula and connect it to a hwpc-sensor
+using a mongoDB instance.
+
+For more detail see our documentation [here](http://powerapi.org)
 
 ## Get input data
 
