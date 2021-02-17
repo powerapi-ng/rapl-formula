@@ -62,7 +62,8 @@ class RAPLHandler(Handler):
             """
             power = math.ldexp(counter, -32)
             metadata = {'socket': socket, 'event': event}
-            return PowerReport(report.timestamp, report.sensor, report.target,
+            socket_id = self.state.metadata['socket'] if 'socket' in self.state.metadata else -1
+            return PowerReport(report.timestamp, report.sensor, report.target, socket_id,
                                power, metadata)
 
         if 'rapl' not in report.groups:

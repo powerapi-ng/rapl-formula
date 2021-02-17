@@ -45,14 +45,14 @@ class RAPLFormulaState(FormulaState):
     """
     RAPLFormulaState
     """
-    def __init__(self, actor, pushers, formula_id):
+    def __init__(self, actor, pushers, formula_id, metadata):
         """
         Initialize a new RAPLFormula actor state.
         :param actor: Actor linked to the state
         :param pushers: Pushers available for the actor
         :param formula_id: Formula id
         """
-        super().__init__(actor, pushers)
+        super().__init__(actor, pushers, metadata)
         self.formula_id = formula_id
 
 
@@ -74,7 +74,7 @@ class RAPLFormulaActor(FormulaActor):
         formula_id = reduce(lambda acc, x: acc + (re.search(r'^\(? ?\'(.*)\'\)?', x).group(1),), name.split(','), ())
 
         #: (powerapi.State): Basic state of the Formula.
-        self.state = RAPLFormulaState(self, pusher_actors, formula_id)
+        self.state = RAPLFormulaState(self, pusher_actors, formula_id, self.formula_metadata)
 
     def setup(self):
         """
