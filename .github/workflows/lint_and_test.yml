@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
 env:
-  repository: https://github.com/powerapi-ng/rapl-formula-formula
+  repository: https://github.com/powerapi-ng/rapl-formula
 jobs:
   lint_and_test:
     runs-on: ubuntu-latest
