@@ -1,223 +1,87 @@
-"""
-Copyright (c) 2018, INRIA
-Copyright (c) 2018, University of Lille
-All rights reserved.
+# Copyright (c) 2021, INRIA
+# Copyright (c) 2021, University of Lille
+# All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
 
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
 
-* Neither the name of the copyright holder nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-"""
-
-import math
-import mock
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import pytest
+import math
 
-from powerapi.message import UnknowMessageTypeException
-from powerapi.report import create_core_report, create_socket_report
-from powerapi.report import create_group_report, create_report_root
-from powerapi.report import PowerReport
-from rapl_formula.rapl_handlers import RAPLHandler
-from rapl_formula.rapl_formula_actor import RAPLFormulaState
+from thespian.actors import ActorExitRequest
 
-#####################################
-def get_fake_pusher():
-    """
-    Return a fake pusher
+from powerapi.formula import CpuDramDomainValues
+from powerapi.message import StartMessage, FormulaStartMessage, ErrorMessage, EndMessage, OKMessage
+from powerapi.report import Report, PowerReport, HWPCReport
+from powerapi.test_utils.abstract_test import AbstractTestActor, recv_from_pipe
+from powerapi.test_utils.actor import system
+from powerapi.test_utils.dummy_actor import logger
+import datetime
 
-    """
-    fake_pusher = mock.Mock()
-    fake_pusher.send = mock.Mock()
-    return fake_pusher
+from rapl_formula.actor import RAPLValues, RAPLFormulaActor
+from rapl_formula.context import RAPLFormulaScope, RAPLFormulaConfig
 
-@pytest.fixture
-def state():
-    return RAPLFormulaState(None, [], ('toto', 'toto', '1'))
+class TestRAPLFormula(AbstractTestActor):
+    @pytest.fixture
+    def actor(self, system):
+        actor = system.createActor(RAPLFormulaActor)
+        yield actor
+        system.tell(actor, ActorExitRequest())
 
+    @pytest.fixture
+    def actor_start_message(self, logger):
+        config = RAPLFormulaConfig(RAPLFormulaScope.CPU, 1000, 'RAPL_ENERGY_PKG')
+        values = RAPLValues({'logger': logger},config)
+        return FormulaStartMessage('system', 'test_rapl_formula', values, CpuDramDomainValues('test_device', ('test_sensor', 0, 0)))
 
-#####################################
-# Test RAPLFormulaHWPCReportHandler #
-#####################################
+    def test_starting_rapl_formula_without_raplFormulaStartMessage_answer_ErrorMessage(self, system, actor):
+        answer = system.ask(actor, StartMessage('system', 'test'))
+        assert isinstance(answer, ErrorMessage)
+        assert answer.error_message == 'use FormulaStartMessage instead of StartMessage'
 
+    def test_send_hwpc_report_to_rapl_formula_return_correct_result(self, system, started_actor, dummy_pipe_out):
+        report = HWPCReport.from_json(
+            {"timestamp": "2021-10-05T09:14:58.226",
+              "sensor": "toto",
+              "target": "all",
+              "groups":
+              {"rapl":
+               {"0":
+                {"7":
+                 {"RAPL_ENERGY_PKG": 5558763520.0,
+                  "time_enabled": 1000770053.0,
+                  "time_running": 1000770053.0
+                  }
+                 }
+                }
+               }
+             }
+        )
 
-def test_handle_hwpc_report_with_one_rapl_event(state):
-    """
-    handle a HWPC report with a simple RAPL event
+        system.tell(started_actor,report)
 
-    The HWPC report contain only one RAPL event and no other groups
+        _, msg = recv_from_pipe(dummy_pipe_out, 1)
 
-    The handle method must return a PowerReport containing only the RAPL event
-    """
-    raw_power = 10
-    socket_id = '1'
-    rapl_event_id = 'RAPL_1'
-
-    hwpc_report = create_report_root(
-        [create_group_report('rapl', [
-            create_socket_report(socket_id, [create_core_report('1',
-                                                                rapl_event_id,
-                                                                raw_power)])
-        ])])
-
-    validation_report = PowerReport(hwpc_report.timestamp, hwpc_report.sensor,
-                                    hwpc_report.target,
-                                    math.ldexp(raw_power, -32),
-                                    {'socket': socket_id,
-                                     'event': rapl_event_id})
-
-    result = RAPLHandler(state)._estimate(hwpc_report)
-    assert [validation_report] == result
-
-
-def test_handle_hwpc_report_with_one_rapl_event_and_other_groups(state):
-    """
-    handle a HWPC report with a simple RAPL event and events from other
-    groups
-
-    The HWPC report contain one RAPL event and events from a group 'sys'
-    with two cores
-
-    The handle method must return a PowerReport containing only the RAPL event
-    """
-    raw_power = 10
-    socket_id = '1'
-    rapl_event_id = 'RAPL_1'
-
-    hwpc_report = create_report_root(
-        [create_group_report('rapl', [
-            create_socket_report(socket_id, [create_core_report('1',
-                                                                rapl_event_id,
-                                                                raw_power)])]),
-         create_group_report('sys', [
-             create_socket_report(socket_id,
-                                  [create_core_report('1', 'e0', 0),
-                                   create_core_report('2', 'e0', 0)])
-         ])])
-
-    validation_report = PowerReport(hwpc_report.timestamp, hwpc_report.sensor,
-                                    hwpc_report.target,
-                                    math.ldexp(raw_power, -32),
-                                    {'socket': socket_id,
-                                     'event': rapl_event_id})
-
-    result = RAPLHandler(state)._estimate(hwpc_report)
-
-    assert [validation_report] == result
-
-
-def test_handle_hwpc_report_with_two_rapl_event(state):
-    """
-    handle a HWPC report with two RAPL events
-
-    The HWPC report contain only two RAPL events and no other groups
-
-    The handle method must return two PowerReport containing each RAPL event
-    """
-    socket_id = '1'
-    raw_power_1 = 10
-    rapl_event_id_1 = 'RAPL_1'
-    raw_power_2 = 20
-    rapl_event_id_2 = 'RAPL_2'
-
-    events = {rapl_event_id_1: raw_power_1, rapl_event_id_2: raw_power_2}
-
-    hwpc_report = create_report_root(
-        [create_group_report('rapl', [
-            create_socket_report(socket_id,
-                                 [create_core_report('1',
-                                  None, None,
-                                  events=events)])
-        ])])
-
-    validation_report_1 = PowerReport(hwpc_report.timestamp,
-                                      hwpc_report.sensor,
-                                      hwpc_report.target,
-                                      math.ldexp(raw_power_1, -32),
-                                      {'socket': socket_id,
-                                       'event': rapl_event_id_1})
-
-    validation_report_2 = PowerReport(hwpc_report.timestamp,
-                                      hwpc_report.sensor,
-                                      hwpc_report.target,
-                                      math.ldexp(raw_power_2, -32),
-                                      {'socket': socket_id,
-                                       'event': rapl_event_id_2})
-
-    result = RAPLHandler(state)._estimate(hwpc_report)
-
-    assert len(result) == 2
-    assert validation_report_1 in result
-    assert validation_report_2 in result
-
-
-def test_handle_hwpc_report_with_two_rapl_event_and_other_groups(state):
-    """
-    handle a HWPC report with two RAPL events and events from other
-    groups
-
-    The HWPC report contain two RAPL events and events from a group 'sys'
-    with two cores
-
-    The handle method must return two PowerReport containing each RAPL event
-    """
-    socket_id = '1'
-    raw_power_1 = 10
-    rapl_event_id_1 = 'RAPL_1'
-    raw_power_2 = 20
-    rapl_event_id_2 = 'RAPL_2'
-
-    events = {rapl_event_id_1: raw_power_1, rapl_event_id_2: raw_power_2}
-
-    hwpc_report = create_report_root(
-        [create_group_report('rapl', [
-            create_socket_report(socket_id,
-                                 [create_core_report(
-                                     '1',
-                                     None,
-                                     None,
-                                     events=events)])]),
-
-         create_group_report('sys', [
-             create_socket_report(socket_id,
-                                  [create_core_report('1', 'e0', 0),
-                                   create_core_report('2', 'e0', 0)])])])
-
-    validation_report_1 = PowerReport(hwpc_report.timestamp,
-                                      hwpc_report.sensor,
-                                      hwpc_report.target,
-                                      math.ldexp(raw_power_1, -32),
-                                      {'socket': socket_id,
-                                       'event': rapl_event_id_1})
-
-    validation_report_2 = PowerReport(hwpc_report.timestamp,
-                                      hwpc_report.sensor,
-                                      hwpc_report.target,
-                                      math.ldexp(raw_power_2, -32),
-                                      {'socket': socket_id,
-                                       'event': rapl_event_id_2})
-
-    result = RAPLHandler(state)._estimate(hwpc_report)
-
-    assert len(result) == 2
-    assert validation_report_1 in result
-    assert validation_report_2 in result
+        assert isinstance(msg,PowerReport)
+        assert msg.power ==  math.ldexp(5558763520.0, -32)
