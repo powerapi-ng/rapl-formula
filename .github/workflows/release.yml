@@ -131,13 +131,6 @@ jobs:
           push: true
           file: Dockerfile-cpython
           tags: powerapi/rapl-formula:latest, powerapi/rapl-formula:${{needs.check_release.outputs.version}}
-      - name: Build and push pypy image
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
-        with:
-          context: .
-          push: true
-          file: Dockerfile-pypy
-          tags: powerapi/rapl-formula-pypy:latest, powerapi/rapl_formula:pypy-${{needs.check_release.outputs.version}}
   build_deb_package:
     name: Build debian binary package
     runs-on: ubuntu-latest
