@@ -1,0 +1,6 @@
+FROM powerapi/powerapi:1.0.0
+USER powerapi
+COPY --chown=powerapi . /tmp/rapl-formula
+RUN pip install --user --no-cache-dir "/tmp/rapl-formula" && rm -r /tmp/rapl-formula
+
+ENTRYPOINT ["python3", "-m", "rapl_formula"]
