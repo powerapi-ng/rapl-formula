@@ -35,5 +35,5 @@ In both case the parameters to precises are the following :
 - `enable-dram-formula` (bool): Enable DRAM formula, default=True
 - `'cpu-rapl-ref-event` (str): RAPL event used as reference for the CPU power models, default='RAPL_ENERGY_PKG'
 - `'dram-rapl-ref-event` (str): RAPL event used as reference for the DRAM power models, default='RAPL_ENERGY_DRAM'
-- `'sensor-reports-frequency` (int): (for stream mode) The frequency with which measurements are made
+- `'sensor-report-sampling-interval` (int): (for stream mode) The frequency with which measurements are made
   (in milliseconds)

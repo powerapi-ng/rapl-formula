@@ -63,7 +63,7 @@ def generate_rapl_parser() -> ComponentSubParser:
     parser.add_argument('dram-rapl-ref-event', help='RAPL event used as reference for the DRAM power models', default='RAPL_ENERGY_DRAM')
 
     # Sensor information
-    parser.add_argument('sensor-reports-frequency', help='The frequency with which measurements are made (in milliseconds)', type=int, default=1000)
+    parser.add_argument('sensor-report-sampling-interval', help='The frequency with which measurements are made (in milliseconds)', type=int, default=1000)
 
     return parser
 
@@ -85,7 +85,7 @@ def setup_cpu_formula_actor(supervisor, fconf, route_table, report_filter, power
     :param pushers: Reports pushers
     """
 
-    formula_config = RAPLFormulaConfig(RAPLFormulaScope.CPU, fconf['sensor-reports-frequency'],
+    formula_config = RAPLFormulaConfig(RAPLFormulaScope.CPU, fconf['sensor-report-sampling-interval'],
                                        fconf['cpu-rapl-ref-event'])
 
     dispatcher_start_message = DispatcherStartMessage('system', 'cpu_dispatcher', RAPLFormulaActor,
@@ -106,7 +106,7 @@ def setup_dram_formula_actor(supervisor, fconf, route_table, report_filter, powe
     :return: Initialized DRAM dispatcher actor
     """
     formula_config = RAPLFormulaConfig(RAPLFormulaScope.DRAM,
-                                       fconf['sensor-reports-frequency'],
+                                       fconf['sensor-report-sampling-interval'],
                                        fconf['dram-rapl-ref-event'])
 
     dispatcher_start_message = DispatcherStartMessage('system',
@@ -226,8 +226,8 @@ class RAPLConfigValidator(ConfigValidator):
             config['cpu-tdp'] = 125
         if 'cpu-base-clock' not in config:
             config['cpu-base-clock'] = 100
-        if 'sensor-reports-frequency' not in config:
-            config['sensor-reports-frequency'] = 1000
+        if 'sensor-report-sampling-interval' not in config:
+            config['sensor-report-sampling-interval'] = 1000
         return True
 
 
