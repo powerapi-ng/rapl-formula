@@ -38,7 +38,7 @@ from powerapi import __version__ as powerapi_version
 from powerapi.dispatcher import RouteTable
 
 from powerapi.cli import ConfigValidator
-from powerapi.cli.tools import ComponentSubParser, store_true, ReportModifierGenerator, PullerGenerator, PusherGenerator, CommonCLIParser
+from powerapi.cli.tools import store_true, ReportModifierGenerator, PullerGenerator, PusherGenerator, CommonCLIParser
 from powerapi.message import DispatcherStartMessage
 from powerapi.report import HWPCReport
 from powerapi.dispatch_rule import HWPCDispatchRule, HWPCDepthLevel
@@ -53,7 +53,7 @@ from rapl_formula.actor import RAPLFormulaActor, RAPLValues
 from rapl_formula.context import RAPLFormulaScope, RAPLFormulaConfig
 
 
-def generate_rapl_parser() -> ComponentSubParser:
+def generate_rapl_parser():
     """
     Construct and returns the SmartWatts cli parameters parser.
     :return: SmartWatts cli parameters parser
@@ -237,17 +237,16 @@ class RAPLConfigValidator(ConfigValidator):
         return True
 
 
-def get_config_from_cli():
+def get_config():
     """
     Get he config from the cli args
     """
     parser = generate_rapl_parser()
-    return parser.parse_argv()
+    return parser.parse()
 
 
 if __name__ == "__main__":
-    config_file_path = get_config_file(sys.argv)
-    conf = get_config_from_file(config_file_path) if config_file_path is not None else get_config_from_cli()
+    conf = get_config()
     if not RAPLConfigValidator.validate(conf):
         sys.exit(-1)
     logging.basicConfig(level=logging.WARNING if conf['verbose'] else logging.INFO)
